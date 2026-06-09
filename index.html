@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💕 DatePlanner — Plan Something Special</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════ -->
+<!--  INTRO GATE SCREEN                            -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="intro-screen" id="introScreen">
+    <div class="intro-bg-hearts" aria-hidden="true">
+        <span>💕</span><span>💗</span><span>💖</span><span>💝</span><span>💓</span><span>💕</span><span>💗</span>
+    </div>
+    <div class="intro-card">
+        <div class="intro-logo">💕</div>
+        <h1 class="intro-title">Do you want to<br>continue?</h1>
+        <p class="intro-sub">Let's plan something special together</p>
+        <div class="intro-btns">
+            <button class="btn-yes" id="introYes">✅ Yes, let's go!</button>
+            <button class="btn-no"  id="introNo" >❌ No</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!--  MAIN SITE                                    -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="mainSite" class="main-site hidden">
+
+    <!-- floating hearts bg -->
+    <div class="hearts-bg" id="heartsBg" aria-hidden="true"></div>
+
+    <!-- NAV -->
+    <nav class="navbar">
+        <div class="nav-inner">
+            <span class="logo">💕 DatePlanner</span>
+            <div class="nav-links">
+                <a href="#hero"       class="nl">Home</a>
+                <a href="#dates"      class="nl">Dates</a>
+                <a href="#activities" class="nl">Ideas</a>
+                <a href="#reasons"    class="nl">Why Us</a>
+            </div>
+            <div class="music-wrap">
+                <button id="musicBtn" class="music-btn" title="Toggle music">🔊</button>
+                <input  id="volSlider" type="range" min="0" max="100" value="40" class="vol-slider">
+            </div>
+        </div>
+    </nav>
+
+    <!-- hidden audio -->
+    <audio id="bgMusic" loop>
+        <!-- Multiple sources for reliability -->
+        <source src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_f87b58da2c.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- ─── HOME SECTIONS ─── -->
+    <div id="homeSections">
+
+        <!-- HERO -->
+        <section id="hero" class="hero">
+            <div class="hero-content">
+                <p class="hero-eyebrow">Plan a real date</p>
+                <h1 class="hero-title">Stop texting "wyd?"<br>Start planning something<br><em>beautiful</em>.</h1>
+                <p class="hero-sub">Choose a special day and let's make memories together.</p>
+                <button class="pill-btn" onclick="smoothScroll('dates')">Get Started →</button>
+            </div>
+            <div class="hero-deco" aria-hidden="true">
+                <span class="hd hd1">💕</span>
+                <span class="hd hd2">💗</span>
+                <span class="hd hd3">💖</span>
+            </div>
+        </section>
+
+        <!-- DATE PICKER -->
+        <section id="dates" class="section-wrap">
+            <h2 class="section-title">When shall I pick you up?</h2>
+            <div class="date-layout">
+                <div class="calendar-card glass">
+                    <div class="cal-header">
+                        <button class="cal-nav" onclick="prevMonth()">‹</button>
+                        <h3 id="calMonthYear">—</h3>
+                        <button class="cal-nav" onclick="nextMonth()">›</button>
+                    </div>
+                    <div class="cal-weekdays">
+                        <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                    </div>
+                    <div class="cal-grid" id="calGrid"></div>
+                </div>
+                <div class="date-right">
+                    <div class="date-display glass">
+                        <p class="dd-label">Selected Date</p>
+                        <p class="dd-value" id="selDateText">Click a date ✨</p>
+                    </div>
+                    <button class="pill-btn" onclick="confirmDate()">Confirm Date 💕</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ACTIVITIES -->
+        <section id="activities" class="section-wrap">
+            <h2 class="section-title">Date Ideas They'll Love</h2>
+            <div class="act-grid">
+                <div class="act-card glass" onclick="goPage('dinner')">
+                    <div class="act-icon">🍽️</div>
+                    <h3>Dinner Date</h3>
+                    <p>Candlelit dinner at a cozy restaurant you've been wanting to try</p>
+                </div>
+                <div class="act-card glass" onclick="goPage('movie')">
+                    <div class="act-icon">🎬</div>
+                    <h3>Movie Night</h3>
+                    <p>Catch the latest trending film and share popcorn together</p>
+                </div>
+                <div class="act-card glass" onclick="goPage('coffee')">
+                    <div class="act-icon">☕</div>
+                    <h3>Coffee Date</h3>
+                    <p>Relax at a cute café and have meaningful conversations</p>
+                </div>
+                <div class="act-card glass" onclick="goPage('beach')">
+                    <div class="act-icon">🌅</div>
+                    <h3>Beach Walk</h3>
+                    <p>Stroll along the shore as the sun sets over the horizon</p>
+                </div>
+                <div class="act-card glass" onclick="goPage('icecream')">
+                    <div class="act-icon">🍦</div>
+                    <h3>Ice Cream Date</h3>
+                    <p>Get your favourite flavours and explore new ones together</p>
+                </div>
+                <div class="act-card glass" onclick="goPage('surprise')">
+                    <div class="act-icon">🎁</div>
+                    <h3>Surprise Date</h3>
+                    <p>Let fate decide something unexpected and magical</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- REASONS -->
+        <section id="reasons" class="section-wrap">
+            <h2 class="section-title">Why We Should Go Out</h2>
+            <div class="reasons-grid">
+                <div class="reason-card glass"><span class="rn">01</span><h3>More Fun Than Texting</h3><p>Real conversations and genuine laughter beats any text message</p></div>
+                <div class="reason-card glass"><span class="rn">02</span><h3>Create Memories</h3><p>Moments shared in person become stories we'll tell forever</p></div>
+                <div class="reason-card glass"><span class="rn">03</span><h3>Quality Time Together</h3><p>Disconnect from the digital world and truly connect</p></div>
+                <div class="reason-card glass"><span class="rn">04</span><h3>Discover New Places</h3><p>Explore hidden gems, restaurants and beautiful locations</p></div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="cta-section">
+            <div class="cta-content">
+                <h2>Life is short.<br>Make it memorable.</h2>
+                <p>Stop overthinking. Start planning that date.</p>
+                <button class="pill-btn pill-large" onclick="confettiBurst(); smoothScroll('dates')">Plan Our Date 💕</button>
+            </div>
+        </section>
+
+    </div><!-- /homeSections -->
+
+    <!-- ─── ACTIVITY PAGES ─── -->
+
+    <!-- DINNER -->
+    <div id="page-dinner" class="act-page hidden">
+        <div class="page-head">
+            <button class="back-btn" onclick="goHome()">← Back</button>
+            <h1>Choose Your Romantic Dinner 🍽️</h1>
+        </div>
+        <div class="options-grid" id="dinnerGrid"></div>
+    </div>
+
+    <!-- COFFEE -->
+    <div id="page-coffee" class="act-page hidden">
+        <div class="page-head">
+            <button class="back-btn" onclick="goHome()">← Back</button>
+            <h1>Find Your Perfect Coffee Spot ☕</h1>
+        </div>
+        <div class="options-grid" id="coffeeGrid"></div>
+    </div>
+
+    <!-- BEACH -->
+    <div id="page-beach" class="act-page hidden">
+        <div class="page-head">
+            <button class="back-btn" onclick="goHome()">← Back</button>
+            <h1>Beautiful Beaches in Tunisia 🌅</h1>
+        </div>
+        <div class="options-grid" id="beachGrid"></div>
+    </div>
+
+    <!-- ICE CREAM -->
+    <div id="page-icecream" class="act-page hidden">
+        <div class="page-head">
+            <button class="back-btn" onclick="goHome()">← Back</button>
+            <h1>Delicious Ice Cream Places 🍦</h1>
+        </div>
+        <div class="options-grid" id="icecreamGrid"></div>
+    </div>
+
+    <!-- MOVIE -->
+    <div id="page-movie" class="act-page hidden">
+        <div class="page-head">
+            <button class="back-btn" onclick="goHome()">← Back</button>
+            <h1>Latest Trending Movies 🎬</h1>
+            <p class="page-sub">Pick a movie for your date night</p>
+        </div>
+        <div id="movieLoading" class="loading-box">
+            <div class="spinner"></div>
+            <p>Loading trending movies…</p>
+        </div>
+        <div class="movie-grid" id="movieGrid"></div>
+    </div>
+
+    <!-- SURPRISE -->
+    <div id="page-surprise" class="act-page hidden">
+        <div class="page-head">
+            <button class="back-btn" onclick="goHome()">← Back</button>
+            <h1>Let Fate Decide 🎁</h1>
+        </div>
+        <div class="surprise-wrap">
+            <div class="surprise-box glass" id="surpriseBox">
+                <p class="surprise-hint">Click the button to generate a surprise date combo!</p>
+                <button class="pill-btn pill-large" onclick="genSurprise()">🎲 Generate Surprise Date</button>
+                <div class="surprise-result hidden" id="surpriseResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FINAL DATE PAGE -->
+    <div id="page-final" class="act-page hidden">
+        <div class="page-head">
+            <button class="back-btn" onclick="goHome()">← Back</button>
+            <h1>Your Perfect Date Plan 💕</h1>
+        </div>
+        <div class="final-wrap">
+            <div class="final-hero" id="finalHero"></div>
+            <div class="final-card glass">
+                <h2 id="finalMainTitle">❤️ Finally, It's a Date!</h2>
+                <div class="final-info-grid">
+                    <div class="fi">
+                        <strong>📅 Date</strong>
+                        <span id="fDate">—</span>
+                    </div>
+                    <div class="fi">
+                        <strong>🎯 Activity</strong>
+                        <span id="fActivity">—</span>
+                    </div>
+                    <div class="fi">
+                        <strong id="fPlaceLabel">📍 Place</strong>
+                        <span id="fPlace">—</span>
+                    </div>
+                </div>
+                <div class="timeline-section">
+                    <h3>📋 Timeline</h3>
+                    <div class="timeline" id="fTimeline"></div>
+                </div>
+                <div class="desc-section">
+                    <h3>About Your Experience</h3>
+                    <p id="fDesc"></p>
+                </div>
+                <div class="final-actions">
+                    <button class="pill-btn pill-large" onclick="finishDate()">✅ OK — Back to Home</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /mainSite -->
+
+<!-- MOVIE DETAIL MODAL -->
+<div class="modal-overlay hidden" id="movieModal">
+    <div class="modal-box movie-modal glass">
+        <button class="modal-close" onclick="closeMovieModal()">✕</button>
+        <div class="movie-modal-grid">
+            <div class="mm-poster" id="mmPoster"></div>
+            <div class="mm-info">
+                <h2 id="mmTitle"></h2>
+                <div class="mm-meta">
+                    <p><strong>Release:</strong> <span id="mmRelease"></span></p>
+                    <p><strong>Duration:</strong> <span id="mmDuration"></span> min</p>
+                    <p><strong>Genre:</strong> <span id="mmGenre"></span></p>
+                    <p><strong>Rating:</strong> <span id="mmRating"></span> ★</p>
+                </div>
+                <div class="mm-synopsis">
+                    <h3>Synopsis</h3>
+                    <p id="mmSynopsis"></p>
+                </div>
+                <div id="mmTrailer"></div>
+                <div class="mm-btns">
+                    <button class="pill-btn" onclick="pickMovie()">✅ Select This Movie</button>
+                    <button class="pill-btn pill-sec" onclick="closeMovieModal()">❌ Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DATE CONFIRM MODAL -->
+<div class="modal-overlay hidden" id="confirmModal">
+    <div class="modal-box glass">
+        <h2>Great Choice! 💕</h2>
+        <p>You've selected: <strong id="confirmDateText"></strong></p>
+        <div class="modal-btns">
+            <button class="pill-btn" onclick="closeConfirmModal()">Perfect!</button>
+            <button class="pill-btn pill-sec" onclick="closeConfirmModal()">Change</button>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
