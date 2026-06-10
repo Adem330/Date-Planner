@@ -11,16 +11,8 @@ let selectedDate   = null;
 let selectedAct    = null;   // { type, name, place, image, timeline, desc, budget, rating }
 let calDate        = new Date();
 let musicOn        = false;
-let tmdbGenres     = {};
-let trendingMovies = [];
 let activeMovie    = null;   // movie chosen in modal
-
-// ─── TMDB ─────────────────────────────────────────
-const TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI5ODhhZjM5YzU2YWE5ZWFmOTk2NDQ5MzJmZjA0ZDk4YiIsIm5iZiI6MTcwNDcwNDYyNi45MDcsInN1YiI6IjY1YzhkYjQyMDM1YjU2MDBlYmM0MjNjYyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.3TqfxBzhc7Y0C9L_0Nl2X1f-BEcZDBL5A7YNXekIIZc';
-const TMDB_BASE  = 'https://api.themoviedb.org/3';
-const TMDB_IMG   = 'https://image.tmdb.org/t/p/w342';
-const TMDB_HDIMG = 'https://image.tmdb.org/t/p/w500';
-const TMDB_HDRS  = { accept: 'application/json', Authorization: `Bearer ${TMDB_TOKEN}` };
+let activeGenreKey = null;   // currently selected genre key
 
 // ─── ACTIVITY DATA ────────────────────────────────
 const DATA = {
@@ -251,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMusic();
     renderCalendar();
     buildGrids();
-    fetchGenres();
+    buildGenreGrid();
 });
 
 // ─── INTRO ─────────────────────────────────────────
@@ -458,7 +450,7 @@ function goPage(page) {
     const target = document.getElementById('page-' + page);
     if (target) { target.classList.remove('hidden'); window.scrollTo(0,0); }
 
-    if (page === 'movie') loadMovies();
+    if (page === 'movie') resetMoviePage();
     if (page === 'surprise') {
         document.getElementById('surpriseResult').classList.add('hidden');
         document.getElementById('surpriseResult').innerHTML = '';
@@ -530,115 +522,196 @@ function selectActivity(type, id) {
     showFinalPage();
 }
 
-// ─── MOVIE SYSTEM ──────────────────────────────────
-async function fetchGenres() {
-    try {
-        const r = await fetch(`${TMDB_BASE}/genre/movie/list?language=en-US`, { headers: TMDB_HDRS });
-        const d = await r.json();
-        tmdbGenres = Object.fromEntries((d.genres || []).map(g => [g.id, g.name]));
-    } catch(e) { /* silent */ }
+// ─── LOCAL MOVIE DATABASE (offline — no API) ───────
+
+const GENRES = [
+    { key:'action',    label:'Action',    emoji:'🔥', color:'#ff4d4d' },
+    { key:'romance',   label:'Romance',   emoji:'❤️', color:'#ff69b4' },
+    { key:'comedy',    label:'Comedy',    emoji:'😂', color:'#ffd700' },
+    { key:'horror',    label:'Horror',    emoji:'👻', color:'#8b00ff' },
+    { key:'scifi',     label:'Sci-Fi',    emoji:'🚀', color:'#00bfff' },
+    { key:'adventure', label:'Adventure', emoji:'🗺️', color:'#3cb371' },
+    { key:'animation', label:'Animation', emoji:'🎨', color:'#ff8c00' },
+    { key:'thriller',  label:'Thriller',  emoji:'😱', color:'#2f4f4f' }
+];
+
+const MOVIES = {
+    action: [
+        { title:'Mission: Impossible – Fallout', year:'2018', duration:'2h 27m', director:'Christopher McQuarrie', cast:'Tom Cruise, Henry Cavill, Rebecca Ferguson', rating:'⭐ 7.7/10', desc:'Ethan Hunt and his IMF team race to retrieve stolen plutonium before a global catastrophe — a relentless, breathtaking action masterpiece.', emoji:'💥', img:'https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?auto=format&fit=crop&w=400&q=80' },
+        { title:'John Wick', year:'2014', duration:'1h 41m', director:'Chad Stahelski', cast:'Keanu Reeves, Michael Nyqvist, Alfie Allen', rating:'⭐ 7.4/10', desc:'A legendary assassin comes out of retirement to seek revenge after his puppy is killed. One of the greatest action movies ever made.', emoji:'🐶', img:'https://images.unsplash.com/photo-1572177812156-58036aae439c?auto=format&fit=crop&w=400&q=80' },
+        { title:'Mad Max: Fury Road', year:'2015', duration:'2h 0m', director:'George Miller', cast:'Tom Hardy, Charlize Theron', rating:'⭐ 8.1/10', desc:'In a post-apocalyptic wasteland, Max joins forces with rebel warrior Furiosa to escape a tyrant. A visual, adrenaline-fuelled triumph.', emoji:'🚗', img:'https://images.unsplash.com/photo-1553861215-14786a921b8a?auto=format&fit=crop&w=400&q=80' },
+        { title:'The Dark Knight', year:'2008', duration:'2h 32m', director:'Christopher Nolan', cast:'Christian Bale, Heath Ledger, Aaron Eckhart', rating:'⭐ 9.0/10', desc:'Batman faces his greatest threat yet: the Joker, a criminal mastermind who delights in chaos. A genre-defining superhero film.', emoji:'🦇', img:'https://images.unsplash.com/photo-1608346128025-1896b97a6fa7?auto=format&fit=crop&w=400&q=80' },
+        { title:'Gladiator', year:'2000', duration:'2h 35m', director:'Ridley Scott', cast:'Russell Crowe, Joaquin Phoenix, Connie Nielsen', rating:'⭐ 8.5/10', desc:'A betrayed Roman general becomes a slave, then a gladiator, seeking justice against the corrupt emperor who murdered his family.', emoji:'⚔️', img:'https://images.unsplash.com/photo-1542831371-29b0f74f9713?auto=format&fit=crop&w=400&q=80' }
+    ],
+    romance: [
+        { title:'The Notebook', year:'2004', duration:'2h 3m', director:'Nick Cassavetes', cast:'Ryan Gosling, Rachel McAdams', rating:'⭐ 7.8/10', desc:'A poor and passionate young man falls for a rich young woman in 1940s South Carolina — a timeless love story that will make you cry.', emoji:'📖', img:'https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?auto=format&fit=crop&w=400&q=80' },
+        { title:'Titanic', year:'1997', duration:'3h 14m', director:'James Cameron', cast:'Leonardo DiCaprio, Kate Winslet', rating:'⭐ 7.9/10', desc:'Two strangers fall madly in love aboard the doomed RMS Titanic. One of cinema\'s greatest epic love stories of all time.', emoji:'🚢', img:'https://images.unsplash.com/photo-1519455953755-af066f52f1a6?auto=format&fit=crop&w=400&q=80' },
+        { title:'Me Before You', year:'2016', duration:'1h 50m', director:'Thea Sharrock', cast:'Emilia Clarke, Sam Claflin', rating:'⭐ 7.4/10', desc:'A small-town girl takes a job as caretaker for a quadriplegic man. What starts as a job becomes an extraordinary love story.', emoji:'🌸', img:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=400&q=80' },
+        { title:'La La Land', year:'2016', duration:'2h 8m', director:'Damien Chazelle', cast:'Ryan Gosling, Emma Stone', rating:'⭐ 8.0/10', desc:'A jazz pianist and an aspiring actress fall in love in Los Angeles, but as their dreams take shape, their relationship faces a difficult reality.', emoji:'🎶', img:'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=400&q=80' },
+        { title:'Pride & Prejudice', year:'2005', duration:'2h 9m', director:'Joe Wright', cast:'Keira Knightley, Matthew Macfadyen', rating:'⭐ 7.8/10', desc:'Spirited Elizabeth Bennet navigates issues of manners, education, and marriage in the British Regency era — a gorgeous adaptation.', emoji:'🏡', img:'https://images.unsplash.com/photo-1474552226712-ac0f0961a954?auto=format&fit=crop&w=400&q=80' }
+    ],
+    comedy: [
+        { title:'The Mask', year:'1994', duration:'1h 41m', director:'Chuck Russell', cast:'Jim Carrey, Cameron Diaz', rating:'⭐ 6.9/10', desc:'A timid banker discovers a magical mask that transforms him into a wacky, larger-than-life character. Jim Carrey at his most gloriously unhinged.', emoji:'🎭', img:'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=400&q=80' },
+        { title:'Home Alone', year:'1990', duration:'1h 43m', director:'Chris Columbus', cast:'Macaulay Culkin, Joe Pesci, Daniel Stern', rating:'⭐ 7.7/10', desc:'An 8-year-old boy is accidentally left behind while his family flies to Paris. He must defend his home against two bumbling burglars.', emoji:'🏠', img:'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=400&q=80' },
+        { title:"Mr. Bean's Holiday", year:'2007', duration:'1h 29m', director:'Steve Bendelack', cast:'Rowan Atkinson, Emma de Caunes', rating:'⭐ 6.6/10', desc:'Mr. Bean wins a trip to Cannes and causes mayhem throughout France. A charming, laugh-out-loud silent comedy road trip.', emoji:'🧳', img:'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=400&q=80' },
+        { title:'Dumb and Dumber', year:'1994', duration:'1h 47m', director:'Farrelly Brothers', cast:'Jim Carrey, Jeff Daniels', rating:'⭐ 7.3/10', desc:'Two clueless best friends embark on a cross-country road trip to return a briefcase to a woman one of them has a crush on.', emoji:'🚌', img:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80' },
+        { title:'The Hangover', year:'2009', duration:'1h 40m', director:'Todd Phillips', cast:'Bradley Cooper, Zach Galifianakis, Ed Helms', rating:'⭐ 7.7/10', desc:'Three friends must piece together the previous night after a wild Las Vegas bachelor party goes spectacularly, hilariously wrong.', emoji:'🎰', img:'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=400&q=80' }
+    ],
+    horror: [
+        { title:'The Conjuring', year:'2013', duration:'1h 52m', director:'James Wan', cast:'Vera Farmiga, Patrick Wilson', rating:'⭐ 7.5/10', desc:'Paranormal investigators Ed and Lorraine Warren are called to help a family terrorized by a dark presence in their farmhouse. Based on true events.', emoji:'👁️', img:'https://images.unsplash.com/photo-1509248961158-e54f6934749c?auto=format&fit=crop&w=400&q=80' },
+        { title:'Insidious', year:'2010', duration:'1h 43m', director:'James Wan', cast:'Patrick Wilson, Rose Byrne', rating:'⭐ 6.8/10', desc:'A family looks to prevent evil spirits from trapping their comatose child in a realm called The Further. Atmospheric, genuinely frightening horror.', emoji:'🕯️', img:'https://images.unsplash.com/photo-1515630278258-407f994731fe?auto=format&fit=crop&w=400&q=80' },
+        { title:'The Nun', year:'2018', duration:'1h 36m', director:'Corin Hardy', cast:'Taissa Farmiga, Demián Bichir', rating:'⭐ 5.3/10', desc:'A priest and a novitiate are sent by the Vatican to investigate a mysterious death at a remote Romanian abbey haunted by a demonic nun.', emoji:'⛪', img:'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=400&q=80' },
+        { title:'IT', year:'2017', duration:'2h 15m', director:'Andy Muschietti', cast:'Jaeden Martell, Bill Skarsgård', rating:'⭐ 7.3/10', desc:'Seven young outcasts in Derry, Maine face Pennywise, an ancient shape-shifting evil that emerges from the sewers every 27 years.', emoji:'🎈', img:'https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=400&q=80' },
+        { title:'Annabelle', year:'2014', duration:'1h 39m', director:'John R. Leonetti', cast:'Annabelle Wallis, Ward Horton', rating:'⭐ 5.4/10', desc:'A couple begin to experience terrifying supernatural occurrences after a vintage doll named Annabelle enters their home.', emoji:'🪆', img:'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=400&q=80' }
+    ],
+    scifi: [
+        { title:'Interstellar', year:'2014', duration:'2h 49m', director:'Christopher Nolan', cast:'Matthew McConaughey, Anne Hathaway, Jessica Chastain', rating:'⭐ 8.7/10', desc:'A team of explorers travel through a wormhole in space to ensure humanity\'s survival. A breathtaking, emotionally devastating masterpiece.', emoji:'🌌', img:'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=400&q=80' },
+        { title:'Inception', year:'2010', duration:'2h 28m', director:'Christopher Nolan', cast:'Leonardo DiCaprio, Ellen Page, Tom Hardy', rating:'⭐ 8.8/10', desc:'A thief enters the dreams of others to steal their secrets, but is given a chance to have his criminal record erased if he can implant an idea.', emoji:'🌀', img:'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80' },
+        { title:'Avatar', year:'2009', duration:'2h 42m', director:'James Cameron', cast:'Sam Worthington, Zoe Saldana, Sigourney Weaver', rating:'⭐ 7.9/10', desc:'A paraplegic marine on the alien world Pandora falls in love with a Na\'vi native. A visual revolution and a stunning cinematic event.', emoji:'💙', img:'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=400&q=80' },
+        { title:'The Matrix', year:'1999', duration:'2h 16m', director:'Wachowski Sisters', cast:'Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss', rating:'⭐ 8.7/10', desc:'A hacker discovers reality as he knows it is a simulation, and joins a rebellion against the machines that created it. A genre-defining film.', emoji:'💊', img:'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=400&q=80' },
+        { title:'Dune', year:'2021', duration:'2h 35m', director:'Denis Villeneuve', cast:'Timothée Chalamet, Zendaya, Oscar Isaac', rating:'⭐ 8.0/10', desc:'A noble family becomes embroiled in a war for control over the most valuable substance in the universe on a desert planet. Epic sci-fi cinema.', emoji:'🏜️', img:'https://images.unsplash.com/photo-1532188363366-3a1b2ac4a338?auto=format&fit=crop&w=400&q=80' }
+    ],
+    adventure: [
+        { title:'Indiana Jones: Raiders', year:'1981', duration:'1h 55m', director:'Steven Spielberg', cast:'Harrison Ford, Karen Allen', rating:'⭐ 8.4/10', desc:'Archaeologist Indiana Jones races against Nazi agents to find the mythical Ark of the Covenant before they can use its power.', emoji:'🪖', img:'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80' },
+        { title:'Pirates of the Caribbean', year:'2003', duration:'2h 23m', director:'Gore Verbinski', cast:'Johnny Depp, Orlando Bloom, Keira Knightley', rating:'⭐ 8.1/10', desc:'The swashbuckling Captain Jack Sparrow teams with a young blacksmith to rescue a governor\'s daughter from cursed pirates.', emoji:'🏴‍☠️', img:'https://images.unsplash.com/photo-1500835556837-99ac94a94552?auto=format&fit=crop&w=400&q=80' },
+        { title:'Jumanji: Welcome to the Jungle', year:'2017', duration:'1h 59m', director:'Jake Kasdan', cast:'Dwayne Johnson, Jack Black, Kevin Hart', rating:'⭐ 6.9/10', desc:'Four teenagers are sucked into a magical video game and must work together to survive and escape. Hilarious, thrilling adventure fun.', emoji:'🎮', img:'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=400&q=80' },
+        { title:'Uncharted', year:'2022', duration:'1h 56m', director:'Ruben Fleischer', cast:'Tom Holland, Mark Wahlberg', rating:'⭐ 6.3/10', desc:'Treasure hunter Nathan Drake sets off on a globe-trotting expedition to find a $5 billion fortune lost by Magellan 500 years ago.', emoji:'🗺️', img:'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&w=400&q=80' },
+        { title:'Jungle Cruise', year:'2021', duration:'2h 7m', director:'Jaume Collet-Serra', cast:'Dwayne Johnson, Emily Blunt', rating:'⭐ 6.6/10', desc:'A wisecracking riverboat captain takes a scientist on a quest through the Amazon to find the legendary Tree of Life — wild adventure awaits.', emoji:'🌿', img:'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=400&q=80' }
+    ],
+    animation: [
+        { title:'Toy Story', year:'1995', duration:'1h 21m', director:'John Lasseter', cast:'Tom Hanks, Tim Allen', rating:'⭐ 8.3/10', desc:'A cowboy toy is threatened when a new spaceman toy arrives and takes his place as top toy. Pixar\'s landmark masterpiece about friendship.', emoji:'🤠', img:'https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&w=400&q=80' },
+        { title:'Frozen', year:'2013', duration:'1h 42m', director:'Jennifer Lee & Chris Buck', cast:'Idina Menzel, Kristen Bell', rating:'⭐ 7.4/10', desc:'When the kingdom of Arendelle is plunged into eternal winter by Queen Elsa\'s powers, her sister Anna embarks on an extraordinary journey.', emoji:'❄️', img:'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?auto=format&fit=crop&w=400&q=80' },
+        { title:'Coco', year:'2017', duration:'1h 45m', director:'Lee Unkrich', cast:'Anthony Gonzalez, Gael García Bernal', rating:'⭐ 8.4/10', desc:'A young boy travels to the Land of the Dead to find his great-great-grandfather and bring his music back to his family. Stunningly beautiful.', emoji:'💀', img:'https://images.unsplash.com/photo-1519922639192-e73293ca430e?auto=format&fit=crop&w=400&q=80' },
+        { title:'Moana', year:'2016', duration:'1h 53m', director:'John Musker & Ron Clements', cast:'Auli\'i Cravalho, Dwayne Johnson', rating:'⭐ 7.6/10', desc:'A spirited teenager sails across the ocean to find a fabled demigod and save her people. A gorgeous, inspiring Polynesian adventure.', emoji:'🌊', img:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80' },
+        { title:'Inside Out', year:'2015', duration:'1h 35m', director:'Pete Docter', cast:'Amy Poehler, Mindy Kaling, Bill Hader', rating:'⭐ 8.1/10', desc:'The emotions inside a young girl\'s mind clash as she adjusts to a new life in San Francisco. Pixar\'s most emotionally intelligent film.', emoji:'🧠', img:'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=400&q=80' }
+    ],
+    thriller: [
+        { title:'Se7en', year:'1995', duration:'2h 7m', director:'David Fincher', cast:'Brad Pitt, Morgan Freeman, Kevin Spacey', rating:'⭐ 8.6/10', desc:'Two detectives hunt a serial killer who uses the seven deadly sins as his motives. A dark, unforgettable psychological thriller.', emoji:'🔍', img:'https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?auto=format&fit=crop&w=400&q=80' },
+        { title:'Shutter Island', year:'2010', duration:'2h 18m', director:'Martin Scorsese', cast:'Leonardo DiCaprio, Mark Ruffalo', rating:'⭐ 8.1/10', desc:'A U.S. Marshal investigates the disappearance of a patient from a Boston mental institution. Nothing is what it seems in this mind-bending thriller.', emoji:'🏝️', img:'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=400&q=80' },
+        { title:'Gone Girl', year:'2014', duration:'2h 29m', director:'David Fincher', cast:'Ben Affleck, Rosamund Pike', rating:'⭐ 8.1/10', desc:'When a man\'s wife suddenly disappears on their fifth wedding anniversary, he becomes the prime suspect. A razor-sharp psychological masterpiece.', emoji:'👰', img:'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=400&q=80' },
+        { title:'Prisoners', year:'2013', duration:'2h 33m', director:'Denis Villeneuve', cast:'Hugh Jackman, Jake Gyllenhaal', rating:'⭐ 8.1/10', desc:'When two girls go missing on Thanksgiving, a desperate father takes matters into his own hands while a detective races to find the children.', emoji:'🚪', img:'https://images.unsplash.com/photo-1519098901909-b1553a1190af?auto=format&fit=crop&w=400&q=80' },
+        { title:'Zodiac', year:'2007', duration:'2h 37m', director:'David Fincher', cast:'Jake Gyllenhaal, Mark Ruffalo, Robert Downey Jr.', rating:'⭐ 7.7/10', desc:'A cartoonist becomes obsessed with tracking down the Zodiac killer — the elusive serial killer who sent cryptic letters to the press in 1970s California.', emoji:'♑', img:'https://images.unsplash.com/photo-1533477359076-5f8ac4f9c8d3?auto=format&fit=crop&w=400&q=80' }
+    ]
+};
+
+// shuffle array helper
+function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
 }
 
-async function loadMovies() {
-    const loading = document.getElementById('movieLoading');
-    const grid    = document.getElementById('movieGrid');
-    loading.classList.remove('hidden');
-    grid.innerHTML = '';
-
-    try {
-        const r = await fetch(`${TMDB_BASE}/trending/movie/week?language=en-US`, { headers: TMDB_HDRS });
-        if (!r.ok) throw new Error('TMDB fetch failed');
-        const d = await r.json();
-        trendingMovies = (d.results || []).slice(0, 10);
-
-        loading.classList.add('hidden');
-
-        if (!trendingMovies.length) {
-            grid.innerHTML = '<p style="color:#888;text-align:center;padding:3rem;">No movies found. Please try again.</p>';
-            return;
-        }
-
-        grid.innerHTML = trendingMovies.map((mv, idx) => {
-            const genres  = (mv.genre_ids || []).map(id => tmdbGenres[id]).filter(Boolean).join(', ') || 'Film';
-            const poster  = mv.poster_path ? `${TMDB_IMG}${mv.poster_path}` : '';
-            const rating  = mv.vote_average ? mv.vote_average.toFixed(1) : 'N/A';
-            const release = mv.release_date ? mv.release_date.slice(0,4) : '—';
-            return `
-                <div class="movie-card" onclick="openMovieModal(${idx})">
-                    <div class="mc-poster">
-                        ${poster
-                            ? `<img src="${poster}" alt="${escHtml(mv.title)}" loading="lazy">`
-                            : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem;">🎬</div>`
-                        }
-                    </div>
-                    <div class="mc-body">
-                        <p class="mc-title">${escHtml(mv.title)}</p>
-                        <p class="mc-genre">${escHtml(genres)}</p>
-                        <div class="mc-row">
-                            <span>📅 ${release}</span>
-                            <span class="mc-rating">⭐ ${rating}</span>
-                        </div>
-                    </div>
-                </div>`;
-        }).join('');
-
-    } catch(err) {
-        loading.innerHTML = `<p style="color:#e91e8c;">Failed to load movies. Please check your connection and try again.</p>`;
-        console.error(err);
-    }
+// ─── BUILD GENRE GRID ──────────────────────────────
+function buildGenreGrid() {
+    const grid = document.getElementById('genreGrid');
+    if (!grid) return;
+    grid.innerHTML = GENRES.map(g => `
+        <div class="genre-card" onclick="selectGenre('${g.key}')" id="gc-${g.key}">
+            <span class="genre-icon">${g.emoji}</span>
+            <p class="genre-name">${g.label}</p>
+            <p class="genre-count">${MOVIES[g.key].length} films</p>
+        </div>
+    `).join('');
 }
 
-async function openMovieModal(idx) {
-    const mv = trendingMovies[idx];
-    if (!mv) return;
-    activeMovie = mv;
+// ─── SELECT GENRE → SHOW MOVIES ───────────────────
+function selectGenre(key) {
+    activeGenreKey = key;
+    const genre = GENRES.find(g => g.key === key);
 
-    const modal = document.getElementById('movieModal');
-    modal.classList.remove('hidden');
+    // highlight selected genre card
+    document.querySelectorAll('.genre-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('gc-' + key)?.classList.add('selected');
 
-    // Fill basic info immediately
-    document.getElementById('mmTitle').textContent    = mv.title;
-    document.getElementById('mmRelease').textContent  = mv.release_date || 'TBA';
-    document.getElementById('mmDuration').textContent = '…';
-    document.getElementById('mmGenre').textContent    = (mv.genre_ids||[]).map(id=>tmdbGenres[id]).filter(Boolean).join(', ') || '—';
-    document.getElementById('mmRating').textContent   = mv.vote_average ? mv.vote_average.toFixed(1) : 'N/A';
-    document.getElementById('mmSynopsis').textContent = mv.overview || 'A film worth watching together.';
-    document.getElementById('mmTrailer').innerHTML    = '<p style="color:#aaa;font-size:.9rem;">Loading trailer…</p>';
+    // update label
+    document.getElementById('chosenGenreLabel').textContent = `${genre.emoji} ${genre.label}`;
 
-    const posterSrc = mv.poster_path ? `${TMDB_HDIMG}${mv.poster_path}` : '';
-    document.getElementById('mmPoster').innerHTML = posterSrc
-        ? `<img src="${posterSrc}" alt="${escHtml(mv.title)}">`
-        : `<div style="display:flex;align-items:center;justify-content:center;height:300px;font-size:5rem;background:var(--grad2)">🎬</div>`;
+    // shuffle and render movies — store shuffled order for modal
+    window._currentMovies = shuffle(MOVIES[key]);
+    window._currentGenreKey = key;
+    const movies = window._currentMovies;
 
-    // Fetch full details + trailer in parallel
-    try {
-        const [detailRes, videoRes] = await Promise.all([
-            fetch(`${TMDB_BASE}/movie/${mv.id}?language=en-US`, { headers: TMDB_HDRS }),
-            fetch(`${TMDB_BASE}/movie/${mv.id}/videos?language=en-US`, { headers: TMDB_HDRS })
-        ]);
-        const detail = await detailRes.json();
-        const videos = await videoRes.json();
+    const grid = document.getElementById('movieGrid');
+    grid.innerHTML = movies.map((mv, idx) => {
+        const hasImg = mv.img && mv.img.length > 0;
+        const safePfEmoji = mv.emoji;
+        const safePfTitle = escHtml(mv.title);
+        const posterHtml = hasImg
+            ? `<img src="${mv.img}" alt="${escHtml(mv.title)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=&quot;mc-poster-fallback&quot;><span class=&quot;pf-emoji&quot;>${safePfEmoji}</span><span class=&quot;pf-title&quot;>${safePfTitle}</span></div>'">`
+            : `<div class="mc-poster-fallback"><span class="pf-emoji">${mv.emoji}</span><span class="pf-title">${escHtml(mv.title)}</span></div>`;
+        return `
+        <div class="movie-card" onclick="openMovieModal(${idx})" style="animation-delay:${idx * 0.06}s">
+            <div class="mc-poster">
+                ${posterHtml}
+                <span class="mc-genre-ribbon">${genre.label}</span>
+            </div>
+            <div class="mc-body">
+                <p class="mc-title">${escHtml(mv.title)}</p>
+                <p class="mc-year">${mv.year} · ${mv.duration}</p>
+                <p class="mc-desc">${mv.desc.slice(0,80)}…</p>
+                <div class="mc-row">
+                    <span>🎬 ${escHtml(mv.director.split(',')[0])}</span>
+                    <span class="mc-rating">${mv.rating}</span>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
 
-        document.getElementById('mmDuration').textContent = detail.runtime || '120';
-        if (detail.genres?.length) {
-            document.getElementById('mmGenre').textContent = detail.genres.map(g=>g.name).join(', ');
-        }
+    // switch steps
+    document.getElementById('genreStep').classList.add('hidden');
+    document.getElementById('movieStep').classList.remove('hidden');
+}
 
-        const trailer = (videos.results||[]).find(v => v.type==='Trailer' && v.site==='YouTube');
-        document.getElementById('mmTrailer').innerHTML = trailer
-            ? `<iframe src="https://www.youtube.com/embed/${trailer.key}" allowfullscreen style="width:100%;height:220px;border:none;border-radius:12px;margin-top:.5rem;"></iframe>`
-            : '<p style="color:#aaa;font-size:.9rem;">Trailer not available.</p>';
-    } catch(e) {
-        document.getElementById('mmDuration').textContent = '120';
-        document.getElementById('mmTrailer').innerHTML = '';
+// ─── BACK TO GENRES ────────────────────────────────
+function backToGenres() {
+    document.getElementById('genreStep').classList.remove('hidden');
+    document.getElementById('movieStep').classList.add('hidden');
+    activeGenreKey = null;
+}
+
+// ─── RESET MOVIE PAGE (called when entering page) ──
+function resetMoviePage() {
+    document.getElementById('genreStep').classList.remove('hidden');
+    document.getElementById('movieStep').classList.add('hidden');
+    document.getElementById('movieGrid').innerHTML = '';
+    activeGenreKey = null;
+    // re-render genre grid (fresh shuffle next time)
+    buildGenreGrid();
+}
+
+// ─── OPEN MOVIE MODAL ──────────────────────────────
+function openMovieModal(idx) {
+    const genreKey = window._currentGenreKey;
+    const mv = window._currentMovies?.[idx];
+    if (!mv || !genreKey) return;
+    activeMovie = { ...mv, genreKey };
+
+    const genre = GENRES.find(g => g.key === genreKey);
+
+    document.getElementById('mmGenreBadge').textContent = `${genre.emoji} ${genre.label}`;
+    document.getElementById('mmTitle').textContent      = mv.title;
+    document.getElementById('mmRelease').textContent    = mv.year;
+    document.getElementById('mmDuration').textContent   = mv.duration;
+    document.getElementById('mmDirector').textContent   = mv.director;
+    document.getElementById('mmRating').textContent     = mv.rating;
+    document.getElementById('mmSynopsis').textContent   = mv.desc;
+    document.getElementById('mmCast').textContent       = mv.cast;
+
+    const posterEl = document.getElementById('mmPoster');
+    if (mv.img) {
+        posterEl.innerHTML = `<img src="${mv.img}" alt="${escHtml(mv.title)}" onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:320px;font-size:5rem;background:var(--grad2)\\'>${mv.emoji}</div>'">`;
+    } else {
+        posterEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:320px;font-size:5rem;background:var(--grad2)">${mv.emoji}</div>`;
     }
+
+    document.getElementById('movieModal').classList.remove('hidden');
 }
 
 function closeMovieModal() {
     document.getElementById('movieModal').classList.add('hidden');
-    // stop iframe audio
-    const mmT = document.getElementById('mmTrailer');
-    mmT.innerHTML = '';
 }
 
 function pickMovie() {
@@ -649,20 +722,17 @@ function pickMovie() {
     if (!activeMovie) return;
 
     const mv = activeMovie;
-    const genres = (mv.genre_ids||[]).map(id=>tmdbGenres[id]).filter(Boolean).join(', ') || 'Film';
-    const poster = mv.poster_path ? `${TMDB_HDIMG}${mv.poster_path}` : null;
-
     selectedAct = {
         type: 'movie',
         activityLabel: 'Movie Night',
         name:   mv.title,
         place:  `Cinema — ${mv.title}`,
-        image:  poster,
-        emoji:  '🎬',
-        timeline: ['17:30 Meet for dinner','18:30 Walk to cinema','19:00 Movie starts','21:30 Chat about the film','22:00 Late night dessert'],
-        desc:   mv.overview || 'A thrilling film to enjoy together on the big screen.',
+        image:  mv.img || null,
+        emoji:  mv.emoji || '🎬',
+        timeline: ['17:30 Meet for dinner','18:30 Walk to the cinema','19:00 Movie starts','21:30 Chat about the film','22:00 Late night dessert'],
+        desc:   mv.desc,
         budget: '50-70 TND',
-        rating: mv.vote_average ? mv.vote_average.toFixed(1) : '—'
+        rating: mv.rating
     };
 
     closeMovieModal();

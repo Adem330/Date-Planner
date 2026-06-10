@@ -203,14 +203,24 @@
     <div id="page-movie" class="act-page hidden">
         <div class="page-head">
             <button class="back-btn" onclick="goHome()">← Back</button>
-            <h1>Latest Trending Movies 🎬</h1>
-            <p class="page-sub">Pick a movie for your date night</p>
+            <h1>Movie Night 🎬</h1>
+            <p class="page-sub">Pick a genre, then choose your movie</p>
         </div>
-        <div id="movieLoading" class="loading-box">
-            <div class="spinner"></div>
-            <p>Loading trending movies…</p>
+
+        <!-- STEP 1 — GENRE SELECTION -->
+        <div id="genreStep">
+            <p class="genre-prompt">What kind of film are you in the mood for?</p>
+            <div class="genre-grid" id="genreGrid"></div>
         </div>
-        <div class="movie-grid" id="movieGrid"></div>
+
+        <!-- STEP 2 — MOVIE LIST (hidden until genre picked) -->
+        <div id="movieStep" class="hidden">
+            <div class="movie-step-head">
+                <button class="pill-btn pill-sec genre-back-btn" onclick="backToGenres()">← Change Genre</button>
+                <p class="genre-chosen-label">Showing: <span id="chosenGenreLabel"></span></p>
+            </div>
+            <div class="movie-grid" id="movieGrid"></div>
+        </div>
     </div>
 
     <!-- SURPRISE -->
@@ -276,18 +286,22 @@
         <div class="movie-modal-grid">
             <div class="mm-poster" id="mmPoster"></div>
             <div class="mm-info">
+                <div class="mm-genre-badge" id="mmGenreBadge"></div>
                 <h2 id="mmTitle"></h2>
                 <div class="mm-meta">
-                    <p><strong>Release:</strong> <span id="mmRelease"></span></p>
-                    <p><strong>Duration:</strong> <span id="mmDuration"></span> min</p>
-                    <p><strong>Genre:</strong> <span id="mmGenre"></span></p>
-                    <p><strong>Rating:</strong> <span id="mmRating"></span> ★</p>
+                    <p><strong>Year:</strong> <span id="mmRelease"></span></p>
+                    <p><strong>Duration:</strong> <span id="mmDuration"></span></p>
+                    <p><strong>Director:</strong> <span id="mmDirector"></span></p>
+                    <p><strong>Rating:</strong> <span id="mmRating"></span></p>
                 </div>
                 <div class="mm-synopsis">
                     <h3>Synopsis</h3>
                     <p id="mmSynopsis"></p>
                 </div>
-                <div id="mmTrailer"></div>
+                <div class="mm-cast-section">
+                    <h3>Stars</h3>
+                    <p id="mmCast"></p>
+                </div>
                 <div class="mm-btns">
                     <button class="pill-btn" onclick="pickMovie()">✅ Select This Movie</button>
                     <button class="pill-btn pill-sec" onclick="closeMovieModal()">❌ Cancel</button>
